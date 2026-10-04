@@ -1,0 +1,377 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #e50914;
+  --color-primary-container: #111111;
+  --color-primary-fixed: #ff4d4f;
+  --color-primary-fixed-dim: #ff7875;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #ffffff;
+  --color-on-primary-fixed: #000000;
+  --color-on-primary-fixed-variant: #e50914;
+
+  --color-surface: #ffffff;
+  --color-surface-dim: #f5f5f5;
+  --color-surface-bright: #ffffff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #fafafa;
+  --color-surface-container: #f5f5f5;
+  --color-surface-container-high: #eeeeee;
+  --color-surface-container-highest: #e5e5e5;
+  --color-surface-tint: #e50914;
+
+  --color-on-surface: #0a0a0a;
+  --color-on-surface-variant: #555555;
+  --color-on-background: #0a0a0a;
+  --color-background: #ffffff;
+
+  --color-secondary: #222222;
+  --color-secondary-container: #f0f0f0;
+  --color-secondary-fixed: #eeeeee;
+  --color-secondary-fixed-dim: #cccccc;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-fixed: #111111;
+  --color-on-secondary-fixed-variant: #444444;
+  --color-on-secondary-container: #111111;
+
+  --color-tertiary: #e50914;
+  --color-tertiary-container: #fef2f2;
+  --color-tertiary-fixed: #fee2e2;
+  --color-tertiary-fixed-dim: #fca5a5;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-fixed: #7f1d1d;
+  --color-on-tertiary-fixed-variant: #991b1b;
+  --color-on-tertiary-container: #b91c1c;
+
+  --color-error: #e50914;
+  --color-error-container: #fee2e2;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #991b1b;
+
+  --color-outline: #737373;
+  --color-outline-variant: #e5e5e5;
+
+  --color-inverse-surface: #171717;
+  --color-inverse-on-surface: #f5f5f5;
+  --color-inverse-primary: #fca5a5;
+}
+
+:root {
+  --font-barlow-family: var(--font-barlow), 'Barlow Condensed', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-inter-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html, body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    color: #0a0a0a;
+    font-family: var(--font-inter-family);
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Safe area insets */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Marquee animation */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 24s linear infinite;
+}
+
+/* Stitch Spacing Classes */
+.px-margin {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+.py-margin {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+.p-margin {
+  padding: 0.75rem;
+}
+.gap-gutter {
+  gap: 0.5rem;
+}
+.gap-x-gutter {
+  column-gap: 0.5rem;
+}
+.gap-y-gutter {
+  row-gap: 0.5rem;
+}
+.gap-space-xs {
+  gap: 0.25rem;
+}
+.gap-space-sm {
+  gap: 0.5rem;
+}
+.gap-space-md {
+  gap: 0.75rem;
+}
+.gap-space-lg {
+  gap: 1.25rem;
+}
+.gap-space-xl {
+  gap: 2rem;
+}
+.p-space-xs {
+  padding: 0.25rem;
+}
+.p-space-sm {
+  padding: 0.5rem;
+}
+.p-space-md {
+  padding: 0.75rem;
+}
+.p-space-lg {
+  padding: 1.25rem;
+}
+.p-space-xl {
+  padding: 2rem;
+}
+.pt-space-xs {
+  padding-top: 0.25rem;
+}
+.pt-space-sm {
+  padding-top: 0.5rem;
+}
+.pt-space-md {
+  padding-top: 0.75rem;
+}
+.pt-space-lg {
+  padding-top: 1.25rem;
+}
+.pt-space-xl {
+  padding-top: 2rem;
+}
+.pb-space-xs {
+  padding-bottom: 0.25rem;
+}
+.pb-space-sm {
+  padding-bottom: 0.5rem;
+}
+.pb-space-md {
+  padding-bottom: 0.75rem;
+}
+.pb-space-lg {
+  padding-bottom: 1.25rem;
+}
+.pb-space-xl {
+  padding-bottom: 2rem;
+}
+.pl-space-sm {
+  padding-left: 0.5rem;
+}
+.pr-space-sm {
+  padding-right: 0.5rem;
+}
+.ml-space-xs {
+  margin-left: 0.25rem;
+}
+.mb-space-xs {
+  margin-bottom: 0.25rem;
+}
+.mb-space-sm {
+  margin-bottom: 0.5rem;
+}
+.mb-space-md {
+  margin-bottom: 0.75rem;
+}
+
+/* Typography Utility Classes matching Stitch Specs */
+.font-display {
+  font-family: var(--font-barlow-family);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.text-display {
+  font-size: 3rem;
+  line-height: 3rem;
+}
+
+.font-headline-lg {
+  font-family: var(--font-barlow-family);
+  font-size: 2rem;
+  line-height: 2.25rem;
+  letter-spacing: 0.02em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.text-headline-lg {
+  font-size: 2rem;
+  line-height: 2.25rem;
+  letter-spacing: 0.02em;
+}
+
+.font-headline-lg-mobile {
+  font-family: var(--font-barlow-family);
+  font-size: 1.625rem;
+  line-height: 1.75rem;
+  letter-spacing: 0.02em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.text-headline-lg-mobile {
+  font-size: 1.625rem;
+  line-height: 1.75rem;
+  letter-spacing: 0.02em;
+}
+
+.font-headline-md {
+  font-family: var(--font-barlow-family);
+  font-size: 1.25rem;
+  line-height: 1.375rem;
+  letter-spacing: 0.03em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.text-headline-md {
+  font-size: 1.25rem;
+  line-height: 1.375rem;
+  letter-spacing: 0.03em;
+}
+
+.font-headline-sm {
+  font-family: var(--font-barlow-family);
+  font-size: 1.0625rem;
+  line-height: 1.25rem;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.text-headline-sm {
+  font-size: 1.0625rem;
+  line-height: 1.25rem;
+  letter-spacing: 0.02em;
+}
+
+.font-ticker-item {
+  font-family: var(--font-barlow-family);
+  font-size: 0.75rem;
+  line-height: 0.875rem;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.text-ticker-item {
+  font-size: 0.75rem;
+  line-height: 0.875rem;
+  letter-spacing: 0.06em;
+}
+
+.font-label-caps {
+  font-family: var(--font-barlow-family);
+  font-size: 0.8125rem;
+  line-height: 0.875rem;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.text-label-caps {
+  font-size: 0.8125rem;
+  line-height: 0.875rem;
+  letter-spacing: 0.08em;
+}
+
+.font-body-lg {
+  font-family: var(--font-inter-family);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 400;
+}
+
+.text-body-lg {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+.font-body-md {
+  font-family: var(--font-inter-family);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 400;
+}
+
+.text-body-md {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.font-body-sm {
+  font-family: var(--font-inter-family);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 400;
+}
+
+.text-body-sm {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.font-price-current {
+  font-family: var(--font-inter-family);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 700;
+}
+
+.text-price-current {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.font-price-original {
+  font-family: var(--font-inter-family);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 400;
+  text-decoration: line-through;
+}
+
+.text-price-original {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+/* Hide scrollbar */
+.scrollbar-none::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none,
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

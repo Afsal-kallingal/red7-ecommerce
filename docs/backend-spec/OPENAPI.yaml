@@ -1,0 +1,1286 @@
+openapi: 3.1.0
+info:
+  title: RED7 Retro Football Kits & Streetwear Backend API
+  version: 1.0.0
+  description: >
+    Production backend API specification for RED7 e-commerce platform.
+    Powers customer storefront and administrative portal without altering frontend contracts.
+servers:
+  - url: https://api.red7.in/api/v1
+    description: Production Cluster
+  - url: http://localhost:8000/api/v1
+    description: Local Development Environment
+
+security: []
+
+paths:
+  # -------------------------------------------------------------
+  # AUTHENTICATION
+  # -------------------------------------------------------------
+  /auth/otp/send:
+    post:
+      summary: Dispatch Phone Verification OTP
+      operationId: sendPhoneOtp
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone:
+                  type: string
+                  pattern: '^(\+91)?[6-9]\d{9}$'
+                  example: "+919876543210"
+      responses:
+        '200':
+          description: OTP dispatched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpSendResponse'
+        '429':
+          description: Rate limit exceeded
+
+  /auth/otp/verify:
+    post:
+      summary: Verify Phone OTP and Exchange for Token
+      operationId: verifyPhoneOtp
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionToken, phone, otp]
+              properties:
+                sessionToken:
+                  type: string
+                phone:
+                  type: string
+                otp:
+                  type: string
+                  pattern: '^\d{6}$'
+      responses:
+        '200':
+          description: Verification successful, session established
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '401':
+          description: Invalid or expired OTP
+
+  /auth/admin/login:
+    post:
+      summary: Backoffice Admin Login
+      operationId: adminLogin
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                totpCode:
+                  type: string
+      responses:
+        '200':
+          description: Admin authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAuthResponse'
+        '401':
+          description: Invalid credentials
+
+  # -------------------------------------------------------------
+  # CATALOG: PRODUCTS & CATEGORIES
+  # -------------------------------------------------------------
+  /products:
+    get:
+      summary: Query Catalog Products
+      operationId: listProducts
+      tags: [Catalog]
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: club
+          in: query
+          schema:
+            type: string
+        - name: size
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [featured, price-low, price-high, newest, best-selling, alpha-asc, alpha-desc]
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: featured
+          in: query
+          schema:
+            type: boolean
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Filtered product items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+
+  /products/{slug}:
+    get:
+      summary: Retrieve Product by Slug
+      operationId: getProductBySlug
+      tags: [Catalog]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detailed product document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+
+  /categories:
+    get:
+      summary: List Storefront Categories
+      operationId: listCategories
+      tags: [Catalog]
+      responses:
+        '200':
+          description: Array of storefront categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+
+  # -------------------------------------------------------------
+  # SEARCH & SUGGESTIONS
+  # -------------------------------------------------------------
+  /search:
+    get:
+      summary: Full-Text Fuzzy Search
+      operationId: searchCatalog
+      tags: [Search]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+
+  /search/suggestions:
+    get:
+      summary: Trending Search Chips & Autocomplete
+      operationId: getSearchSuggestions
+      tags: [Search]
+      responses:
+        '200':
+          description: Suggestions list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trendingChips:
+                    type: array
+                    items:
+                      type: string
+
+  # -------------------------------------------------------------
+  # LOGISTICS & PINCODE
+  # -------------------------------------------------------------
+  /logistics/pincode/{pincode}:
+    get:
+      summary: Check PIN Code Serviceability & COD
+      operationId: checkPincode
+      tags: [Logistics]
+      parameters:
+        - name: pincode
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{6}$'
+      responses:
+        '200':
+          description: Serviceability report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PincodeCheckResult'
+
+  # -------------------------------------------------------------
+  # COUPONS & PROMOTIONS
+  # -------------------------------------------------------------
+  /coupons:
+    get:
+      summary: List Active Promotional Vouchers
+      operationId: listCoupons
+      tags: [Promotions]
+      responses:
+        '200':
+          description: Active vouchers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CouponItem'
+
+  /coupons/validate:
+    post:
+      summary: Validate Coupon Against Cart
+      operationId: validateCoupon
+      tags: [Promotions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                subtotal:
+                  type: number
+                  default: 0
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CouponValidationResult'
+
+  # -------------------------------------------------------------
+  # CHECKOUT & ORDERS
+  # -------------------------------------------------------------
+  /checkout/orders:
+    post:
+      summary: Initialize Order & Reserve Drop Inventory
+      operationId: createOrder
+      tags: [Checkout]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Order created & drop reserved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '422':
+          description: Validation error
+
+  /checkout/upi/config:
+    get:
+      summary: Retrieve Active Merchant UPI Details
+      operationId: getUpiConfig
+      tags: [Checkout]
+      responses:
+        '200':
+          description: UPI configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpiConfigResponse'
+
+  /checkout/upi/verify-vpa:
+    post:
+      summary: Verify Customer VPA Handle
+      operationId: verifyVpa
+      tags: [Checkout]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vpa]
+              properties:
+                vpa:
+                  type: string
+      responses:
+        '200':
+          description: VPA validity check
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  vpa:
+                    type: string
+                  customerName:
+                    type: string
+
+  /orders/{id}:
+    get:
+      summary: Retrieve Order by ID or Allocation ID
+      operationId: getOrderById
+      tags: [Orders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+  /orders:
+    get:
+      summary: Fetch Customer Order History
+      operationId: getCustomerOrders
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Order collection
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+
+  # -------------------------------------------------------------
+  # CONTENT, REVIEWS & CMS
+  # -------------------------------------------------------------
+  /cms/homepage:
+    get:
+      summary: Fetch Homepage CMS, Banners & Tickers
+      operationId: getHomepageCms
+      tags: [CMS]
+      responses:
+        '200':
+          description: Complete homepage layout config
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomepageCms'
+
+  /reviews:
+    get:
+      summary: Fetch Customer Reviews
+      operationId: listReviews
+      tags: [Reviews]
+      responses:
+        '200':
+          description: Reviews array
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReviewItem'
+    post:
+      summary: Submit Verified Customer Review
+      operationId: submitReview
+      tags: [Reviews]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitReviewRequest'
+      responses:
+        '201':
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewItem'
+
+  /faqs:
+    get:
+      summary: Fetch FAQ Knowledge Base
+      operationId: listFaqs
+      tags: [CMS]
+      responses:
+        '200':
+          description: FAQs array
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FAQItem'
+
+  /store/settings/public:
+    get:
+      summary: Retrieve Public Store & WhatsApp Settings
+      operationId: getPublicStoreSettings
+      tags: [StoreSettings]
+      responses:
+        '200':
+          description: Public store settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicStoreSettings'
+
+  # -------------------------------------------------------------
+  # ADMIN BACKOFFICE APIS
+  # -------------------------------------------------------------
+  /admin/kpis:
+    get:
+      summary: Admin Dashboard KPI Metrics
+      operationId: getAdminKpis
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: KPI summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminKpiSummary'
+
+  /admin/products:
+    post:
+      summary: Add New Product to Catalog
+      operationId: adminAddProduct
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminProductPayload'
+      responses:
+        '201':
+          description: Product added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+  /admin/products/{id}:
+    put:
+      summary: Update Catalog Product
+      operationId: adminUpdateProduct
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+    delete:
+      summary: Soft Delete Catalog Product
+      operationId: adminDeleteProduct
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deletion confirmed
+
+  /admin/inventory/batch:
+    patch:
+      summary: Bulk Update Variant Inventory Matrix
+      operationId: adminBatchInventory
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Inventory updated
+
+  /admin/cms/homepage:
+    put:
+      summary: Update Homepage CMS Banners
+      operationId: adminUpdateHomepageCms
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated homepage CMS
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomepageCms'
+
+  /admin/orders:
+    get:
+      summary: List Orders with Status Filter
+      operationId: adminListOrders
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+
+  /admin/orders/{id}/status:
+    patch:
+      summary: Transition Order Fulfillment Status
+      operationId: adminUpdateOrderStatus
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/OrderStatus'
+      responses:
+        '200':
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+  /admin/settings:
+    get:
+      summary: Fetch Full Admin Settings
+      operationId: adminGetSettings
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Settings payload
+    put:
+      summary: Update Admin Settings (WhatsApp, UPI, COD)
+      operationId: adminUpdateSettings
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings updated
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    KitSize:
+      type: string
+      enum: ['S', 'M', 'L', 'XL', '2XL']
+
+    OrderStatus:
+      type: string
+      enum: ['PLACED', 'PACKED', 'TRANSIT', 'DELIVERED', 'CANCELLED']
+
+    PaymentMethodType:
+      type: string
+      enum: ['upi_intent', 'upi_vpa', 'card', 'net_banking', 'cod']
+
+    UpiApp:
+      type: string
+      enum: ['gpay', 'phonepe', 'paytm', 'bhim']
+
+    MediaAsset:
+      type: object
+      required: [id, url, alt]
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+        alt:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        isPrimary:
+          type: boolean
+        blurDataUrl:
+          type: string
+
+    SizeInventory:
+      type: object
+      required: [size, label, inStock, stock]
+      properties:
+        size:
+          $ref: '#/components/schemas/KitSize'
+        label:
+          type: string
+        inStock:
+          type: boolean
+        stock:
+          type: integer
+
+    ProductSpecs:
+      type: object
+      required: [material, fit, badges, print]
+      properties:
+        material:
+          type: string
+        fit:
+          type: string
+        badges:
+          type: string
+        print:
+          type: string
+        origin:
+          type: string
+        weight:
+          type: string
+
+    Product:
+      type: object
+      required: [id, slug, title, shortTitle, subtitle, category, department, price, inStock, stockCount, rating, reviewsCount, primaryImage, gallery, sizes, specs, description]
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        title:
+          type: string
+        shortTitle:
+          type: string
+        subtitle:
+          type: string
+        category:
+          type: string
+          enum: ['football-jerseys', 'sportswear', 'streetwear', 'shoes', 'accessories', 'gadgets']
+        department:
+          type: string
+        club:
+          type: string
+        league:
+          type: string
+        price:
+          type: number
+        originalPrice:
+          type: number
+        discountPercent:
+          type: integer
+        badge:
+          type: string
+        dropTag:
+          type: string
+        inStock:
+          type: boolean
+        stockCount:
+          type: integer
+        rating:
+          type: number
+        reviewsCount:
+          type: integer
+        primaryImage:
+          $ref: '#/components/schemas/MediaAsset'
+        gallery:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaAsset'
+        sizes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SizeInventory'
+        specs:
+          $ref: '#/components/schemas/ProductSpecs'
+        description:
+          type: string
+        featured:
+          type: boolean
+        isNewArrival:
+          type: boolean
+        createdAt:
+          type: string
+
+    ProductListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        total:
+          type: integer
+
+    Category:
+      type: object
+      required: [id, slug, name, tagline, itemCount, image, featured]
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        tagline:
+          type: string
+        itemCount:
+          type: integer
+        image:
+          $ref: '#/components/schemas/MediaAsset'
+        featured:
+          type: boolean
+
+    ShippingAddress:
+      type: object
+      required: [fullName, phone, addressLine1, city, state, pincode]
+      properties:
+        fullName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        pincode:
+          type: string
+
+    OrderItem:
+      type: object
+      required: [productId, slug, title, size, price, quantity, image]
+      properties:
+        productId:
+          type: string
+        slug:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        size:
+          type: string
+        price:
+          type: number
+        originalPrice:
+          type: number
+        quantity:
+          type: integer
+        image:
+          $ref: '#/components/schemas/MediaAsset'
+
+    Order:
+      type: object
+      required: [id, allocationId, createdAt, status, statusText, estimatedDelivery, items, subtotal, discount, deliveryFee, total, paymentMethod, paymentRef, shippingAddress]
+      properties:
+        id:
+          type: string
+        allocationId:
+          type: string
+        createdAt:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        statusText:
+          type: string
+        estimatedDelivery:
+          type: string
+        trackingAwb:
+          type: string
+        courierName:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        subtotal:
+          type: number
+        discount:
+          type: number
+        deliveryFee:
+          type: number
+        total:
+          type: number
+        paymentMethod:
+          type: string
+        paymentRef:
+          type: string
+        shippingAddress:
+          $ref: '#/components/schemas/ShippingAddress'
+
+    CreateOrderRequest:
+      type: object
+      required: [customer, shippingAddress, paymentMethod, items]
+      properties:
+        customer:
+          type: object
+          required: [fullName, phone]
+          properties:
+            fullName:
+              type: string
+            phone:
+              type: string
+            email:
+              type: string
+        shippingAddress:
+          $ref: '#/components/schemas/ShippingAddress'
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethodType'
+        upiApp:
+          $ref: '#/components/schemas/UpiApp'
+        upiVpa:
+          type: string
+        couponCode:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+
+    PincodeCheckResult:
+      type: object
+      required: [pincode, city, state, serviceable, codAvailable, estimatedDeliveryText, expressAvailable]
+      properties:
+        pincode:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        serviceable:
+          type: boolean
+        codAvailable:
+          type: boolean
+        estimatedDeliveryText:
+          type: string
+        expressAvailable:
+          type: boolean
+
+    CouponItem:
+      type: object
+      required: [id, code, title, discountType, discountValue, minOrderValue, description, expiryDate, isActive]
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        title:
+          type: string
+        discountType:
+          type: string
+          enum: ['percentage', 'fixed']
+        discountValue:
+          type: number
+        minOrderValue:
+          type: number
+        description:
+          type: string
+        expiryDate:
+          type: string
+        isActive:
+          type: boolean
+
+    CouponValidationResult:
+      type: object
+      required: [valid, discount, message]
+      properties:
+        valid:
+          type: boolean
+        discount:
+          type: number
+        message:
+          type: string
+
+    ReviewItem:
+      type: object
+      required: [id, author, location, rating, comment, productName, verifiedBuyer, date]
+      properties:
+        id:
+          type: string
+        author:
+          type: string
+        location:
+          type: string
+        rating:
+          type: integer
+        comment:
+          type: string
+        productName:
+          type: string
+        verifiedBuyer:
+          type: boolean
+        date:
+          type: string
+
+    SubmitReviewRequest:
+      type: object
+      required: [author, location, rating, comment, productName]
+      properties:
+        author:
+          type: string
+        location:
+          type: string
+        rating:
+          type: integer
+        comment:
+          type: string
+        productName:
+          type: string
+
+    FAQItem:
+      type: object
+      required: [id, category, question, answer]
+      properties:
+        id:
+          type: string
+        category:
+          type: string
+          enum: ['shipping', 'sizing', 'authenticity', 'returns', 'payment']
+        question:
+          type: string
+        answer:
+          type: string
+
+    HomepageCms:
+      type: object
+      required: [hero, tickerStrip, flashBanner]
+      properties:
+        hero:
+          type: object
+          required: [dropBadge, headline, subheadline, ctaPrimaryText, ctaPrimaryLink, ctaSecondaryText, ctaSecondaryLink, image]
+          properties:
+            dropBadge:
+              type: string
+            headline:
+              type: string
+            subheadline:
+              type: string
+            ctaPrimaryText:
+              type: string
+            ctaPrimaryLink:
+              type: string
+            ctaSecondaryText:
+              type: string
+            ctaSecondaryLink:
+              type: string
+            image:
+              $ref: '#/components/schemas/MediaAsset'
+            desktopImage:
+              $ref: '#/components/schemas/MediaAsset'
+        tickerStrip:
+          type: array
+          items:
+            type: object
+            required: [id, text]
+            properties:
+              id:
+                type: string
+              text:
+                type: string
+              isHighlight:
+                type: boolean
+        flashBanner:
+          type: object
+          required: [badge, headline, description, buttonText, buttonLink]
+          properties:
+            badge:
+              type: string
+            headline:
+              type: string
+            description:
+              type: string
+            buttonText:
+              type: string
+            buttonLink:
+              type: string
+
+    AdminKpiSummary:
+      type: object
+      required: [todayRevenue, totalOrders, activeShipments, lowStockItemsCount, averageOrderValue, conversionRate]
+      properties:
+        todayRevenue:
+          type: number
+        totalOrders:
+          type: integer
+        activeShipments:
+          type: integer
+        lowStockItemsCount:
+          type: integer
+        averageOrderValue:
+          type: number
+        conversionRate:
+          type: number
+
+    AdminProductPayload:
+      type: object
+      required: [title, slug, subtitle, category, price, originalPrice, description, inStock, stockCount, imageUrl]
+      properties:
+        title:
+          type: string
+        slug:
+          type: string
+        subtitle:
+          type: string
+        category:
+          type: string
+        price:
+          type: number
+        originalPrice:
+          type: number
+        badge:
+          type: string
+        description:
+          type: string
+        inStock:
+          type: boolean
+        stockCount:
+          type: integer
+        imageUrl:
+          type: string
+        galleryUrls:
+          type: array
+          items:
+            type: string
+
+    PublicStoreSettings:
+      type: object
+      required: [storeName, brandTagline, currency, currencySymbol, whatsapp, cod, shipping]
+      properties:
+        storeName:
+          type: string
+        brandTagline:
+          type: string
+        currency:
+          type: string
+        currencySymbol:
+          type: string
+        whatsapp:
+          type: object
+          required: [phoneNumber, defaultMessage, isEnabled]
+          properties:
+            phoneNumber:
+              type: string
+            defaultMessage:
+              type: string
+            isEnabled:
+              type: boolean
+            supportHours:
+              type: string
+        cod:
+          type: object
+          required: [isEnabled, maxOrderValue]
+          properties:
+            isEnabled:
+              type: boolean
+            maxOrderValue:
+              type: number
+        shipping:
+          type: object
+          required: [freeDeliveryThreshold, standardDeliveryFee]
+          properties:
+            freeDeliveryThreshold:
+              type: number
+            standardDeliveryFee:
+              type: number
+
+    OtpSendResponse:
+      type: object
+      required: [status, message, sessionToken]
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        sessionToken:
+          type: string
+        expiresInSeconds:
+          type: integer
+
+    AuthTokenResponse:
+      type: object
+      required: [status, accessToken, tokenType, expiresIn, user]
+      properties:
+        status:
+          type: string
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+        expiresIn:
+          type: integer
+        user:
+          type: object
+
+    AdminAuthResponse:
+      type: object
+      required: [status, accessToken, tokenType, expiresIn, admin]
+      properties:
+        status:
+          type: string
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+        expiresIn:
+          type: integer
+        admin:
+          type: object
+
+    UpiConfigResponse:
+      type: object
+      required: [merchantVpa, merchantName, merchantCategoryCode, supportedApps]
+      properties:
+        merchantVpa:
+          type: string
+        merchantName:
+          type: string
+        merchantCategoryCode:
+          type: string
+        supportedApps:
+          type: array
+          items:
+            type: object
+            required: [id, name, recommended]
+            properties:
+              id:
+                $ref: '#/components/schemas/UpiApp'
+              name:
+                type: string
+              recommended:
+                type: boolean
+        staticQrUrl:
+          type: string
